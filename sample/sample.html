@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+    <canvas id="board" width="400" height="400"></canvas>
+    <script src="../src/zCanvas.js"></script>
+    <script>
+        var board = document.getElementById("board");
+        var zcanvas = new ZCanvas(board);
+        var rect = zcanvas.Rect({
+        width : 100,
+        height :100,
+        x : 0,
+        y : 0,
+        orignX : 0,
+        orignY : 0,
+        fill : "#000",
+        shadow : true,
+        shadowBlur : 2,
+        shadowColor : "#333",
+        shadowOffsetX : 0,
+        shadowOffsetY : 0,
+        stroke : true,
+        strokeStyle : "#666",
+        strokeWidth : 2,
+        rotate : Math.PI,
+        scaleX : 1,
+        scaleY : 1,
+        opacity : 1
+    });
+    zcanvas.addNode(rect);
+    zcanvas.renderNode(rect,{
+        type:"linear",
+        time:200,
+        delay:20
+    },{
+        width:200,
+        height:200,
+        x:300,
+        y:300
+    },function(){
+        zcanvas.deRenderNode(rect,{
+            time:200,
+            delay:10
+        },{
+            width:100,
+            height:100,
+            x:200,
+            y:200
+        },function(){
+            zcanvas.removeNode(rect);
+        })
+    });
+    </script>
+</body>
+</html>
