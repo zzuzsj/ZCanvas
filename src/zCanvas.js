@@ -20,6 +20,7 @@ ZCanvas.prototype = {
     _classInit: function () {
         this._classObj = {};
         this._idObj = {};
+        this._nodeTypeObj = {};
         this._nodeArray = [];
         this._canvasNodeArray = [];
     },
@@ -37,6 +38,13 @@ ZCanvas.prototype = {
         }
         this._idObj[node.id] = node;
     },
+    _addNodeType:function(node){
+        if(!this._nodeTypeObj[node.nType]){
+            this._nodeTypeObj[node.nType] = [];
+        }
+        this._nodeTypeObj[node.nType].push(node);
+        node._nodeTypeIndex = this._nodeTypeObj[node.nType].length-1;
+    },
     addNode: function (node) {
         if (!node._nodeType || node._nodeType !== 'node') {
             return;
@@ -44,6 +52,7 @@ ZCanvas.prototype = {
         this._nodeArray.push(node);
         node._nodeIndex = this._nodeArray.length - 1;
         node._inCanvas = true;
+        this._addNodeType(node);
         if (node.class && node.class !== '') {
             this._addClass(node);
         }
@@ -134,6 +143,15 @@ ZCanvas.prototype = {
             }
         }
     },
+    findClass:function(className){
+        return this._classObj[className];
+    },
+    findId:function(idName){
+        return this._idObj[idName];
+    },
+    findNode:function(nodeType){
+        return this._nodeTypeObj[nodeType];
+    },
     getCanvas: function () {
         return this._cacheCanvas;
     },
@@ -155,6 +173,14 @@ ZCanvas.prototype = {
             console.warn('You must derender the node first');
             return;
         };
+        var nodeTypeObj = this._nodeTypeObj[node.nType];
+        nodeTypeObj.splice(node._nodeTypeIndex,1);
+        node._nodeTypeIndex = -1;
+        if (nodeTypeObj.length < 1) {
+            delete this._classObj[node._nodeTypeIndex];
+        } else {
+            this.resetArray(nodeTypeObj, '_nodeTypeIndex');
+        }
         if (node.class && node.class !== '') {
             var classObj = this._classObj[node.class];
             classObj.splice(node._classIndex, 1);
@@ -271,6 +297,18 @@ ZCanvas.prototype.CurveLine = function (options) {
     };
     return curveline;
 }
+ZCanvas.prototype.Text = function (options) {
+    var text = new ZCanvas.Text(options, this._cacheContext);
+    var that = this;
+    text.animate = function (config, options, callback) {
+        text.__animateInit(config, options, callback);
+        if (!that._framing) {
+            that._framing = true;
+            that.animate();
+        }
+    };
+    return text;
+}
 
 ZCanvas.prototype.Util = function () {
 }
@@ -361,6 +399,10 @@ ZCanvas.Node.prototype = {
                 case 'fill':
                 case 'lineCap':
                 case 'dashes':
+                case 'fontWeight':
+                case 'fontFamily':
+                case 'fontVariant':
+                case 'fontStyle':
                     node.curAttr[k] = node.attr[k];
                     break;
                 case 'rotate':
@@ -524,7 +566,7 @@ ZCanvas.Rect.prototype.__draw = function () {
     }
     if (this.stroke) {
         this._cacheCtx.strokeStyle = this.curAttr.strokeStyle;
-        this._cacheCtx.lineWidth = this.curAttr._strokeWidth;
+        this._cacheCtx.lineWidth = this.curAttr.strokeWidth;
         this._cacheCtx.strokeRect(-this.curAttr.orignX, -this.curAttr.orignY, this.curAttr.width, this.curAttr.height);
     }
     this._cacheCtx.fillStyle = this.curAttr.fill;
@@ -671,6 +713,74 @@ ZCanvas.CurveLine.prototype.__draw = function () {
     this._cacheCtx.restore();
 }
 
+ZCanvas.Text = function (options, cacheCtx) {
+    this.__init(options, cacheCtx);
+}
+ZCanvas.Text.prototype = Object.create(ZCanvas.Node.prototype);    //Object.create():创建一个空对象，并且这个对象的原型指向它的参数  //这样子我们可以在访问Student.prototype的时候可以向上查找到Person.prototype,又可以在不影响Person的情况下，创建自己的方法
+ZCanvas.Text.prototype.constructor = ZCanvas.Node;
+ZCanvas.Text.prototype.__init = function (options, cacheCtx) {
+    ZCanvas.Node.call(this, options, cacheCtx);
+    this.nType = "text";
+    this.attr.x = options.x || 0;
+    this.attr.y = options.y || 0;
+    this.text = options.text || '';
+    this.attr.fontStyle = options.fontStyle || "normal";
+    this.attr.fontVariant = options.fontVariant || "normal";
+    this.attr.fontWeight = options.fontWeight || 500;
+    this.attr.fontSize= options.fontSize || '20px';
+    this.attr.fontFamily = options.fontFamily || "Arial";
+    this.attr.fill = options.fill || "#000";
+    this.shadow = options.shadow || false;
+    this.attr.shadowBlur = options.shadowBlur || 1;
+    this.attr.shadowColor = options.shadowColor || '#000';
+    this.attr.shadowOffsetX = options.shadowOffsetX || 0;
+    this.attr.shadowOffsetY = options.shadowOffsetY || 0;
+    this.stroke = options.stroke || false;
+    this.attr.strokeStyle = options.strokeStyle || '#000';
+    this.attr.strokeWidth = options.strokeWidth || 1;
+    this.attr.scaleX = options.scaleX || 1;
+    this.attr.scaleY = options.scaleY || 1;
+    this.attr.opacity = (options.opacity || options.opacity === 0) ? options.opacity : 1;
+};
+ZCanvas.Text.prototype.__draw = function () {
+    this._cacheCtx.save();
+    this._cacheCtx.beginPath();
+    this._cacheCtx.translate(this.curAttr.x, this.curAttr.y);
+    var font = '';
+    if (this.curAttr.scaleX !== 1 && this.curAttr.scaleY !== 1) {
+        this._cacheCtx.scale(this.curAttr.scaleX, this.curAttr.scaleY);
+    }
+    if (this.curAttr.opacity !== 1) {
+        this._cacheCtx.globalAlpha = this.curAttr.opacity;
+    }
+    if (this.shadow) {
+        this._cacheCtx.shadowColor = this.curAttr.shadowColor;
+        this._cacheCtx.shadowBlur = this.curAttr.shadowBlur;
+        this._cacheCtx.shadowOffsetX = this.curAttr.shadowOffsetX;
+        this._cacheCtx.shadowOffsetY = this.curAttr.shadowOffsetY;
+    }
+    if (this.curAttr.fontStyle !== 'normal') {
+        font += this.curAttr.fontStyle + ' ';
+    }
+    if (this.curAttr.fontVariant !== 'normal') {
+        font +=this.curAttr.fontVariant + ' ';
+    }
+    if (this.curAttr.fontWeight !== 'normal' && this.curAttr.fontWeight != 500) {
+        font +=this.curAttr.fontWeight + ' ';
+    }
+    font += (this.curAttr.fontSize.toString().indexOf('px')!==-1)?this.curAttr.fontSize:(this.curAttr.fontSize+"px ");
+    font += this.curAttr.fontFamily;
+    this._cacheCtx.font = font;
+    this._cacheCtx.fillStyle = this.curAttr.fill;
+    this._cacheCtx.fillText(this.text,0,20);
+    if(this.stroke){
+        this._cacheCtx.strokeStyle = this.curAttr.strokeStyle;
+        this._cacheCtx.strokeWidth = this.curAttr.strokeWidth;
+        this._cacheCtx.strokeText(this.text,this.curAttr.x,this.curAttr.y);
+    }
+    this._cacheCtx.closePath();
+    this._cacheCtx.restore();
+}
 
 
 // =========================================================ZCanvas.Class======================================================
@@ -692,7 +802,7 @@ ZCanvas.Util = {
                 np = Math.pow((1 - t), 3) * sp + 3 * Math.pow((1 - t), 2) * t * cp1 + 3 * (1 - t) * Math.pow(t, 2) * cp2 + Math.pow(t, 3) * ep;;
                 break;
             default:
-                console.warn('Param curveQiar is must');
+                console.warn('Param curveQuar is must');
         }
         return np.toFixed(2) * 1;
     },
