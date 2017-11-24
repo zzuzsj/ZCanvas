@@ -123,11 +123,11 @@ ZCanvas.prototype = {
         } else {
             node.animate(config, options, function () {
                 if (callback) {
-                    callback();
                     node._rendered = false;
                     that._canvasNodeArray.splice(node._canvasIndex, 1);
                     node._canvasIndex = -1;
                     that.resetArray(that._canvasNodeArray, '_canvasIndex');
+                    callback();
                 }
             });
         }
@@ -136,7 +136,7 @@ ZCanvas.prototype = {
     deRenderNodes: function (nodeArray, config, options, callback) {
         for (var i = 0; i < nodeArray.length; i++) {
             var node = nodeArray[i];
-            if (i < nodeArray.length - 1) {
+            if (i < (nodeArray.length - 1)) {
                 this.deRenderNode(node, config, options);
             } else {
                 this.deRenderNode(node, config, options, callback);
@@ -205,7 +205,7 @@ ZCanvas.prototype = {
     removeNodes: function (nodeArray) {
         for (var i = 0; i < nodeArray.length; i++) {
             var node = nodeArray[i];
-            this.removeNode(node);
+            this.removeNode.call(this,node);
         }
 
     },
@@ -309,6 +309,42 @@ ZCanvas.prototype.Text = function (options) {
     };
     return text;
 }
+ZCanvas.prototype.Circle = function (options) {
+    var circle = new ZCanvas.Circle(options, this._cacheContext);
+    var that = this;
+    circle.animate = function (config, options, callback) {
+        circle.__animateInit(config, options, callback);
+        if (!that._framing) {
+            that._framing = true;
+            that.animate();
+        }
+    };
+    return circle;
+}
+ZCanvas.prototype.Dot = function (options) {
+    var dot = new ZCanvas.Dot(options, this._cacheContext);
+    var that = this;
+    dot.animate = function (config, options, callback) {
+        dot.__animateInit(config, options, callback);
+        if (!that._framing) {
+            that._framing = true;
+            that.animate();
+        }
+    };
+    return dot;
+}
+ZCanvas.prototype.ArcShape = function (options) {
+    var arcshape = new ZCanvas.ArcShape(options, this._cacheContext);
+    var that = this;
+    arcshape.animate = function (config, options, callback) {
+        arcshape.__animateInit(config, options, callback);
+        if (!that._framing) {
+            that._framing = true;
+            that.animate();
+        }
+    };
+    return arcshape;
+}
 
 ZCanvas.prototype.Util = function () {
 }
@@ -396,7 +432,7 @@ ZCanvas.Node.prototype = {
             switch (k) {
                 case 'shadowColor':
                 case 'strokeStyle':
-                case 'fill':
+                case 'fillStyle':
                 case 'lineCap':
                 case 'dashes':
                 case 'fontWeight':
@@ -531,7 +567,8 @@ ZCanvas.Rect.prototype.__init = function (options, cacheCtx) {
     this.attr.y = options.y || 0;
     this.attr.orignX = options.orignX || 0;
     this.attr.orignY = options.orignY || 0;
-    this.attr.fill = options.fill || '#000';
+    this.fill = options.fill || false;
+    this.attr.fillStyle = options.fillStyle || '#000';
     this.shadow = options.shadow || false;
     this.attr.shadowBlur = options.shadowBlur || 1;
     this.attr.shadowColor = options.shadowColor || '#000';
@@ -569,8 +606,10 @@ ZCanvas.Rect.prototype.__draw = function () {
         this._cacheCtx.lineWidth = this.curAttr.strokeWidth;
         this._cacheCtx.strokeRect(-this.curAttr.orignX, -this.curAttr.orignY, this.curAttr.width, this.curAttr.height);
     }
-    this._cacheCtx.fillStyle = this.curAttr.fill;
-    this._cacheCtx.fillRect(-this.curAttr.orignX, -this.curAttr.orignY, this.curAttr.width, this.curAttr.height);
+    if (this.fill) {
+        this._cacheCtx.fillStyle = this.curAttr.fillStyle;
+        this._cacheCtx.fillRect(-this.curAttr.orignX, -this.curAttr.orignY, this.curAttr.width, this.curAttr.height);
+    }
     this._cacheCtx.closePath();
     this._cacheCtx.restore();
 }
@@ -729,7 +768,8 @@ ZCanvas.Text.prototype.__init = function (options, cacheCtx) {
     this.attr.fontWeight = options.fontWeight || 500;
     this.attr.fontSize= options.fontSize || '20px';
     this.attr.fontFamily = options.fontFamily || "Arial";
-    this.attr.fill = options.fill || "#000";
+    this.fill = options.fill || false;
+    this.attr.fillStyle = options.fillStyle || "#000";
     this.shadow = options.shadow || false;
     this.attr.shadowBlur = options.shadowBlur || 1;
     this.attr.shadowColor = options.shadowColor || '#000';
@@ -759,20 +799,16 @@ ZCanvas.Text.prototype.__draw = function () {
         this._cacheCtx.shadowOffsetX = this.curAttr.shadowOffsetX;
         this._cacheCtx.shadowOffsetY = this.curAttr.shadowOffsetY;
     }
-    if (this.curAttr.fontStyle !== 'normal') {
-        font += this.curAttr.fontStyle + ' ';
-    }
-    if (this.curAttr.fontVariant !== 'normal') {
-        font +=this.curAttr.fontVariant + ' ';
-    }
-    if (this.curAttr.fontWeight !== 'normal' && this.curAttr.fontWeight != 500) {
-        font +=this.curAttr.fontWeight + ' ';
-    }
+    font += this.curAttr.fontStyle + ' ';
+    font +=this.curAttr.fontVariant + ' ';
+    font +=this.curAttr.fontWeight + ' ';
     font += (this.curAttr.fontSize.toString().indexOf('px')!==-1)?this.curAttr.fontSize:(this.curAttr.fontSize+"px ");
     font += this.curAttr.fontFamily;
     this._cacheCtx.font = font;
-    this._cacheCtx.fillStyle = this.curAttr.fill;
-    this._cacheCtx.fillText(this.text,0,20);
+    if (this.fill) {
+        this._cacheCtx.fillStyle = this.curAttr.fillStyle;
+        this._cacheCtx.fillText(this.text, 0, 20);
+    }
     if(this.stroke){
         this._cacheCtx.strokeStyle = this.curAttr.strokeStyle;
         this._cacheCtx.strokeWidth = this.curAttr.strokeWidth;
@@ -782,6 +818,218 @@ ZCanvas.Text.prototype.__draw = function () {
     this._cacheCtx.restore();
 }
 
+ZCanvas.Circle = function (options, cacheCtx) {
+    this.__init(options, cacheCtx);
+}
+ZCanvas.Circle.prototype = Object.create(ZCanvas.Node.prototype);    //Object.create():创建一个空对象，并且这个对象的原型指向它的参数  //这样子我们可以在访问Student.prototype的时候可以向上查找到Person.prototype,又可以在不影响Person的情况下，创建自己的方法
+ZCanvas.Circle.prototype.constructor = ZCanvas.Node;
+ZCanvas.Circle.prototype.__init = function (options, cacheCtx) {
+    ZCanvas.Node.call(this, options, cacheCtx);
+    this.nType = "circle";
+    this.attr.x = options.x || 0;
+    this.attr.y = options.y || 0;
+    this.attr.radius = options.radius || 0;
+    this.fill = options.fill || false;
+    this.attr.fillStyle = options.fillStyle || "#000";
+    this.shadow = options.shadow || false;
+    this.attr.shadowBlur = options.shadowBlur || 1;
+    this.attr.shadowColor = options.shadowColor || '#000';
+    this.attr.shadowOffsetX = options.shadowOffsetX || 0;
+    this.attr.shadowOffsetY = options.shadowOffsetY || 0;
+    this.stroke = options.stroke || false;
+    this.attr.strokeStyle = options.strokeStyle || '#000';
+    this.attr.strokeWidth = options.strokeWidth || 1;
+    this.attr.scaleX = options.scaleX || 1;
+    this.attr.scaleY = options.scaleY || 1;
+    this.attr.opacity = (options.opacity || options.opacity === 0) ? options.opacity : 1;
+};
+ZCanvas.Circle.prototype.__draw = function () {
+    this._cacheCtx.save();
+    this._cacheCtx.beginPath();
+    this._cacheCtx.translate(this.curAttr.x, this.curAttr.y);
+    if (this.curAttr.scaleX !== 1 && this.curAttr.scaleY !== 1) {
+        this._cacheCtx.scale(this.curAttr.scaleX, this.curAttr.scaleY);
+    }
+    if (this.curAttr.opacity !== 1) {
+        this._cacheCtx.globalAlpha = this.curAttr.opacity;
+    }
+    if (this.shadow) {
+        this._cacheCtx.shadowColor = this.curAttr.shadowColor;
+        this._cacheCtx.shadowBlur = this.curAttr.shadowBlur;
+        this._cacheCtx.shadowOffsetX = this.curAttr.shadowOffsetX;
+        this._cacheCtx.shadowOffsetY = this.curAttr.shadowOffsetY;
+    }
+    this._cacheCtx.arc(0, 0, this.curAttr.radius, 0, 2 * Math.PI);
+    if (this.fill) {
+        this._cacheCtx.fillStyle = this.curAttr.fillStyle;
+        this._cacheCtx.fill();
+    }
+    if (this.stroke) {
+        this._cacheCtx.strokeStyle = this.curAttr.strokeStyle;
+        this._cacheCtx.lineWidth = this.curAttr.strokeWidth;
+        this._cacheCtx.stroke();
+    }
+    this._cacheCtx.closePath();
+    this._cacheCtx.restore();
+}
+
+ZCanvas.Dot = function (options, cacheCtx) {
+    this.__init(options, cacheCtx);
+}
+ZCanvas.Dot.prototype = Object.create(ZCanvas.Node.prototype);    //Object.create():创建一个空对象，并且这个对象的原型指向它的参数  //这样子我们可以在访问Student.prototype的时候可以向上查找到Person.prototype,又可以在不影响Person的情况下，创建自己的方法
+ZCanvas.Dot.prototype.constructor = ZCanvas.Node;
+ZCanvas.Dot.prototype.__init = function (options, cacheCtx) {
+    ZCanvas.Node.call(this, options, cacheCtx);
+    this.nType = "dot";
+    this.dotType = options.dotType || "rect";
+    this.cent = options.cent || false;
+    this.attr.x = options.x || 0;
+    this.attr.y = options.y || 0;
+    this.attr.centX = options.centX || 0;
+    this.attr.centY = options.centY || 0;
+    this.attr.radius = options.radius || 0;
+    this.attr.centRotate = options.centRotate || 0;
+    this.attr.centRadius = options.centRadius || 0;
+    this.fill = options.fill || false;
+    this.attr.fillStyle = options.fillStyle || "#000";
+    this.shadow = options.shadow || false;
+    this.attr.shadowBlur = options.shadowBlur || 1;
+    this.attr.shadowColor = options.shadowColor || '#000';
+    this.attr.shadowOffsetX = options.shadowOffsetX || 0;
+    this.attr.shadowOffsetY = options.shadowOffsetY || 0;
+    this.stroke = options.stroke || false;
+    this.attr.strokeStyle = options.strokeStyle || '#000';
+    this.attr.strokeWidth = options.strokeWidth || 1;
+    this.attr.scaleX = options.scaleX || 1;
+    this.attr.scaleY = options.scaleY || 1;
+    this.attr.opacity = (options.opacity || options.opacity === 0) ? options.opacity : 1;
+};
+ZCanvas.Dot.prototype.__draw = function () {
+    this._cacheCtx.save();
+    this._cacheCtx.beginPath();
+    if (this.cent) {
+        this._cacheCtx.translate(this.curAttr.centX, this.curAttr.centY);
+    } else {
+        this._cacheCtx.translate(this.curAttr.x, this.curAttr.y);
+    }
+    if (this.curAttr.scaleX !== 1 && this.curAttr.scaleY !== 1) {
+        this._cacheCtx.scale(this.curAttr.scaleX, this.curAttr.scaleY);
+    }
+    if (this.curAttr.opacity !== 1) {
+        this._cacheCtx.globalAlpha = this.curAttr.opacity;
+    }
+    if (this.shadow) {
+        this._cacheCtx.shadowColor = this.curAttr.shadowColor;
+        this._cacheCtx.shadowBlur = this.curAttr.shadowBlur;
+        this._cacheCtx.shadowOffsetX = this.curAttr.shadowOffsetX;
+        this._cacheCtx.shadowOffsetY = this.curAttr.shadowOffsetY;
+    }
+    switch (this.dotType) {
+        case 'rect':
+            if (this.cent) {
+                var x = (this.curAttr.centRadius * Math.cos(this.curAttr.centRotate)).toFixed(1);
+                var y = (this.curAttr.centRadius * Math.sin(this.curAttr.centRotate)).toFixed(1);
+                this._cacheCtx.rect(x - this.curAttr.radius, y - this.curAttr.radius, 2 * this.curAttr.radius, 2 * this.curAttr.radius);
+            } else {
+                this._cacheCtx.rect(-this.curAttr.radius, -this.curAttr.radius, 2 * this.curAttr.radius, 2 * this.curAttr.radius);
+            }
+            break;
+        case 'round':
+            if (this.cent) {
+                var x = (this.curAttr.centRadius * Math.cos(this.curAttr.centRotate)).toFixed(1);
+                var y = (this.curAttr.centRadius * Math.sin(this.curAttr.centRotate)).toFixed(1);
+                this._cacheCtx.arc(x, y, this.curAttr.radius, 0, 2 * Math.PI);
+            } else {
+                this._cacheCtx.arc(0, 0, this.curAttr.radius, 0, 2 * Math.PI);
+            }
+            break;
+        default:
+            break;
+    }
+    if (this.fill) {
+        this._cacheCtx.fillStyle = this.curAttr.fillStyle;
+        this._cacheCtx.fill();
+    }
+    if (this.stroke) {
+        this._cacheCtx.strokeStyle = this.curAttr.strokeStyle;
+        this._cacheCtx.lineWidth = this.curAttr.strokeWidth;
+        this._cacheCtx.stroke();
+    }
+    this._cacheCtx.closePath();
+    this._cacheCtx.restore();
+}
+
+
+ZCanvas.ArcShape = function (options, cacheCtx) {
+    this.__init(options, cacheCtx);
+}
+ZCanvas.ArcShape.prototype = Object.create(ZCanvas.Node.prototype);    //Object.create():创建一个空对象，并且这个对象的原型指向它的参数  //这样子我们可以在访问Student.prototype的时候可以向上查找到Person.prototype,又可以在不影响Person的情况下，创建自己的方法
+ZCanvas.ArcShape.prototype.constructor = ZCanvas.Node;
+ZCanvas.ArcShape.prototype.__init = function (options, cacheCtx) {
+    ZCanvas.Node.call(this, options, cacheCtx);
+    this.nType = "arcshape";
+    this.attr.x = options.x || 0;
+    this.attr.y = options.y || 0;
+    this.attr.radius = options.radius || 0;
+    this.attr.startAngle = options.startAngle || 0;
+    this.attr.endAngle = options.endAngle || 0;
+    this.attr.lineWidth = options.lineWidth || 1;
+    this.attr.lineCap = options.lineCap || 'butt';
+    this.arcLine = options.arcLine || false;
+    this.fill = options.fill || false;
+    this.attr.fillStyle = options.fillStyle || "#000";
+    this.shadow = options.shadow || false;
+    this.attr.shadowBlur = options.shadowBlur || 1;
+    this.attr.shadowColor = options.shadowColor || '#000';
+    this.attr.shadowOffsetX = options.shadowOffsetX || 0;
+    this.attr.shadowOffsetY = options.shadowOffsetY || 0;
+    this.stroke = options.stroke || false;
+    this.attr.strokeStyle = options.strokeStyle || '#000';
+    this.attr.scaleX = options.scaleX || 1;
+    this.attr.scaleY = options.scaleY || 1;
+    this.attr.opacity = (options.opacity || options.opacity === 0) ? options.opacity : 1;
+};
+ZCanvas.ArcShape.prototype.__draw = function () {
+    this._cacheCtx.save();
+    this._cacheCtx.beginPath();
+    this._cacheCtx.translate(this.curAttr.x, this.curAttr.y);
+    if (this.curAttr.scaleX !== 1 && this.curAttr.scaleY !== 1) {
+        this._cacheCtx.scale(this.curAttr.scaleX, this.curAttr.scaleY);
+    }
+    if (this.curAttr.opacity !== 1) {
+        this._cacheCtx.globalAlpha = this.curAttr.opacity;
+    }
+    if (this.shadow) {
+        this._cacheCtx.shadowColor = this.curAttr.shadowColor;
+        this._cacheCtx.shadowBlur = this.curAttr.shadowBlur;
+        this._cacheCtx.shadowOffsetX = this.curAttr.shadowOffsetX;
+        this._cacheCtx.shadowOffsetY = this.curAttr.shadowOffsetY;
+    }
+    if (this.arcLine) {
+        this._cacheCtx.arc(0, 0, this.curAttr.radius, this.curAttr.startAngle, this.curAttr.endAngle);
+    } else {
+        var startX = (this.curAttr.radius * Math.cos(this.curAttr.startAngle)).toFixed(1);
+        var startY = (this.curAttr.radius * Math.sin(this.curAttr.startAngle)).toFixed(1);
+        var endX = (this.curAttr.radius * Math.cos(this.curAttr.endAngle)).toFixed(1);
+        var endY = (this.curAttr.radius * Math.sin(this.curAttr.endAngle)).toFixed(1);
+        this._cacheCtx.moveTo(0, 0);
+        this._cacheCtx.lineTo(startX, startY);
+        this._cacheCtx.arc(0, 0, this.curAttr.radius, this.curAttr.startAngle, this.curAttr.endAngle);
+        this._cacheCtx.lineTo(0, 0);
+        if (this.fill) {
+            this._cacheCtx.fillStyle = this.curAttr.fillStyle;
+            this._cacheCtx.fill();
+        }
+    }
+    if (this.stroke) {
+        this._cacheCtx.strokeStyle = this.curAttr.strokeStyle;
+        this._cacheCtx.lineCap = this.curAttr.lineCap;
+        this._cacheCtx.lineWidth = this.curAttr.lineWidth;
+        this._cacheCtx.stroke();
+    }
+    this._cacheCtx.closePath();
+    this._cacheCtx.restore();
+}
 
 // =========================================================ZCanvas.Class======================================================
 

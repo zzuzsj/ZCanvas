@@ -36,3 +36,11 @@ Methods :
 　　findClass(className)  
 　　findId(idName)  
 　　findNode(nodeType)  
+
+----------
+* *2017.11.24*  
+#### Circle、Dot、ArcShape Class Added :
+Class :  
+　　Circle  
+　　Dot  
+　　ArcShape
