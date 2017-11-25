@@ -417,7 +417,7 @@ ZCanvas.Node.prototype = {
     __animateFrame: function (node) {
         if (node.animAttr.passTime === 0) {
             node.curAttr = ZCanvas.Util.clone(node.animAttr.startAttr);
-            if (node.curAttr.curvePointX && node.curAttr.curvePointY) {
+            if (node.lineLaunch && node.curAttr.curvePointX && node.curAttr.curvePointY) {
                 var x0 = node.curAttr.curvePointX[0];
                 var y0 = node.curAttr.curvePointY[0];
                 node.curAttr.curvePointX = (node.curveQuar === 2 ? [x0, x0, x0] : [x0, x0, x0, x0]);
@@ -449,7 +449,7 @@ ZCanvas.Node.prototype = {
                         for (var i = 0; i < node.curAttr[k].length; i++) {
                             node.curAttr[k][i] = this.__animateCal(node.animAttr.type, node.animAttr.startAttr[k][i], node.attr[k][i], node.animAttr.duration, node.animAttr.startTime, node.animAttr.passTime, true);
                         }
-                        return;
+                        continue;
                     } else {
                         switch (node.curveQuar) {
                             case 2:
@@ -484,7 +484,7 @@ ZCanvas.Node.prototype = {
                         for (var i = 0; i < node.curAttr[k].length; i++) {
                             node.curAttr[k][i] = this.__animateCal(node.animAttr.type, node.animAttr.startAttr[k][i], node.attr[k][i], node.animAttr.duration, node.animAttr.startTime, node.animAttr.passTime, true);
                         }
-                        return;
+                        continue;
                     } else {
                         switch (node.curveQuar) {
                             case 2:
@@ -976,6 +976,7 @@ ZCanvas.ArcShape.prototype.__init = function (options, cacheCtx) {
     this.attr.lineWidth = options.lineWidth || 1;
     this.attr.lineCap = options.lineCap || 'butt';
     this.arcLine = options.arcLine || false;
+    this.counterClockWise = options.counterClockWise || false;
     this.fill = options.fill || false;
     this.attr.fillStyle = options.fillStyle || "#000";
     this.shadow = options.shadow || false;
@@ -1006,7 +1007,7 @@ ZCanvas.ArcShape.prototype.__draw = function () {
         this._cacheCtx.shadowOffsetY = this.curAttr.shadowOffsetY;
     }
     if (this.arcLine) {
-        this._cacheCtx.arc(0, 0, this.curAttr.radius, this.curAttr.startAngle, this.curAttr.endAngle);
+        this._cacheCtx.arc(0, 0, this.curAttr.radius, this.curAttr.startAngle, this.curAttr.endAngle, this.counterClockWise);
     } else {
         var startX = (this.curAttr.radius * Math.cos(this.curAttr.startAngle)).toFixed(1);
         var startY = (this.curAttr.radius * Math.sin(this.curAttr.startAngle)).toFixed(1);
@@ -1014,7 +1015,7 @@ ZCanvas.ArcShape.prototype.__draw = function () {
         var endY = (this.curAttr.radius * Math.sin(this.curAttr.endAngle)).toFixed(1);
         this._cacheCtx.moveTo(0, 0);
         this._cacheCtx.lineTo(startX, startY);
-        this._cacheCtx.arc(0, 0, this.curAttr.radius, this.curAttr.startAngle, this.curAttr.endAngle);
+        this._cacheCtx.arc(0, 0, this.curAttr.radius, this.curAttr.startAngle, this.curAttr.endAngle, this.counterClockWise);
         this._cacheCtx.lineTo(0, 0);
         if (this.fill) {
             this._cacheCtx.fillStyle = this.curAttr.fillStyle;
