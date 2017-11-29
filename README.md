@@ -9,7 +9,7 @@ We should know that ZCanvas is related to canvas dom . So we must create a canva
 ```javascript
     <canvas id="board" width="500" height="500"></canvas>
 ```
-* Create a instance of ZCanvas  
+* Create an instance of ZCanvas  
 We should get the canvas node as a param and new an instance of ZCanvas.  
 ```javascript
     var board = document.getElementById("board");
